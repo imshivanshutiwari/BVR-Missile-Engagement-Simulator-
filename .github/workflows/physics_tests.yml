@@ -1,0 +1,33 @@
+name: Physics Tests
+
+on:
+  push:
+    paths:
+      - 'physics/**'
+      - 'tests/**'
+  pull_request:
+    paths:
+      - 'physics/**'
+      - 'tests/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Run physics tests
+        run: pytest tests/ -v --color=yes --tb=short
+      - name: Verify physics engine
+        run: |
+          python -c "
+          from physics.engagement.engagement_engine import EngagementEngine
+          e = EngagementEngine()
+          r = e.run('head_on')
+          print(f'Intercept: {r[\"intercept_achieved\"]}, Miss: {r[\"miss_distance_m\"]:.2f}m, Pk: {r[\"pk\"]:.3f}')
+          assert r['intercept_achieved'], 'Physics engine failed!'
+          "
