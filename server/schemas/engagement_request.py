@@ -26,7 +26,7 @@ class EngagementRequest(BaseModel):
     """Request body for /api/run-engagement."""
     scenario: str = Field(default="head_on",
                           pattern="^(head_on|tail_chase|crossing)$")
-    guidance_law: str = Field(default="png", pattern="^(png|apng)$")
+    guidance_law: str = Field(default="png", pattern="^(png|apng|ai_model)$")
     launch_range_m: float = Field(default=20000.0, ge=2000, le=80000)
     launch_altitude_m: float = Field(default=8000.0, ge=100, le=20000)
     target_speed_ms: float = Field(default=250.0, ge=100, le=600)

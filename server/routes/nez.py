@@ -19,7 +19,7 @@ nez_computer = NoEscapeZoneComputer()
 async def compute_nez(
     target_speed_ms: float = Query(default=250.0, ge=100, le=600),
     target_altitude_m: float = Query(default=8000.0, ge=100, le=20000),
-    guidance_law: str = Query(default="png", pattern="^(png|apng)$"),
+    guidance_law: str = Query(default="png", pattern="^(png|apng|ai_model)$"),
     resolution: int = Query(default=16, ge=8, le=64)
 ):
     """Compute No-Escape Zone envelope."""

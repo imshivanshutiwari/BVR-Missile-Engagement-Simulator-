@@ -1,7 +1,7 @@
 /** EngagementScene — Main Three.js 3D engagement canvas */
 import React, { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Stars, Line, Html } from '@react-three/drei';
+import { OrbitControls, Stars, Line, Html, Text } from '@react-three/drei';
 import * as THREE from 'three';
 
 /* ── helpers ── */
@@ -100,26 +100,108 @@ function MissileBody({ position, velocity }) {
 
   useFrame((state) => {
     if (flameRef.current) {
-      // Pulse flame with sine wave for animation
       flameRef.current.scale.setScalar(1.0 + Math.sin(state.clock.elapsedTime * 40) * 0.2);
     }
   });
 
   return (
     <group ref={ref} position={position} scale={10}>
-      <mesh>
-        <cylinderGeometry args={[18, 18, 730, 12]} />
-        <meshStandardMaterial color="#ffffff" metalness={0.8} roughness={0.3} emissive="#445566" emissiveIntensity={0.5} />
+      {/* Engine Nozzle */}
+      <mesh position={[0, -370, 0]}>
+        <cylinderGeometry args={[15, 20, 40, 32]} />
+        <meshStandardMaterial color="#333333" metalness={0.8} roughness={0.5} />
       </mesh>
-      <mesh position={[0, 420, 0]}>
-        <coneGeometry args={[18, 100, 12]} />
-        <meshStandardMaterial color="#8899aa" metalness={0.9} roughness={0.2} />
+
+      {/* Bottom Orange/Red Band */}
+      <mesh position={[0, -345, 0]}>
+        <cylinderGeometry args={[20, 20, 10, 32]} />
+        <meshStandardMaterial color="#ff4411" metalness={0.2} roughness={0.4} />
       </mesh>
+
+      {/* Lower Body (White) */}
+      <mesh position={[0, -215, 0]}>
+        <cylinderGeometry args={[20, 20, 250, 32]} />
+        <meshStandardMaterial color="#f0f2f5" metalness={0.1} roughness={0.5} />
+      </mesh>
+
+      {/* "INDIA" Text placed on the sides vertically */}
+      <Text
+        position={[20.5, -215, 0]}
+        rotation={[0, Math.PI/2, 0]}
+        fontSize={35}
+        lineHeight={0.85}
+        color="#111111"
+        fontWeight={900}
+      >
+        I{'\n'}N{'\n'}D{'\n'}I{'\n'}A
+      </Text>
+      <Text
+        position={[-20.5, -215, 0]}
+        rotation={[0, -Math.PI/2, 0]}
+        fontSize={35}
+        lineHeight={0.85}
+        color="#111111"
+        fontWeight={900}
+      >
+        I{'\n'}N{'\n'}D{'\n'}I{'\n'}A
+      </Text>
+
+      {/* Separator Ring (Metallic) */}
+      <mesh position={[0, -85, 0]}>
+        <cylinderGeometry args={[20.5, 20.5, 10, 32]} />
+        <meshStandardMaterial color="#b39d74" metalness={0.8} roughness={0.3} />
+      </mesh>
+
+      {/* Middle Thick Band (Black) */}
+      <mesh position={[0, -40, 0]}>
+        <cylinderGeometry args={[20, 20, 80, 32]} />
+        <meshStandardMaterial color="#1a1c1e" metalness={0.6} roughness={0.3} />
+      </mesh>
+
+      {/* Upper Body (White) */}
+      <mesh position={[0, 75, 0]}>
+        <cylinderGeometry args={[20, 20, 150, 32]} />
+        <meshStandardMaterial color="#f0f2f5" metalness={0.1} roughness={0.5} />
+      </mesh>
+
+      {/* Top Red Band */}
+      <mesh position={[0, 170, 0]}>
+        <cylinderGeometry args={[20, 20, 40, 32]} />
+        <meshStandardMaterial color="#992222" metalness={0.3} roughness={0.4} />
+      </mesh>
+
+      {/* Nose Cone Middle Transition (White) */}
+      <mesh position={[0, 200, 0]}>
+        <cylinderGeometry args={[18, 20, 20, 32]} />
+        <meshStandardMaterial color="#f0f2f5" metalness={0.1} roughness={0.5} />
+      </mesh>
+
+      {/* Black Nose Cone (Sharp) */}
+      <mesh position={[0, 285, 0]}>
+        <cylinderGeometry args={[0, 18, 150, 32]} />
+        <meshStandardMaterial color="#1a1c1e" metalness={0.9} roughness={0.1} />
+      </mesh>
+
+      {/* Orange Zigzag Lines on Lower Body */}
+      <mesh position={[19.5, -280, 6]} rotation={[0.2, 0, 1.25]}>
+        <boxGeometry args={[4, 50, 4]} />
+        <meshStandardMaterial color="#ff6600" emissive="#ff6600" emissiveIntensity={0.2} />
+      </mesh>
+      <mesh position={[19.5, -160, -6]} rotation={[-0.2, 0, -1.25]}>
+        <boxGeometry args={[4, 50, 4]} />
+        <meshStandardMaterial color="#ff6600" emissive="#ff6600" emissiveIntensity={0.2} />
+      </mesh>
+
       {/* Engine Flame */}
-      <mesh ref={flameRef} position={[0, -500, 0]}>
-        <coneGeometry args={[35, 400, 8]} />
-        <meshBasicMaterial color="#ffaa00" transparent opacity={0.8} />
+      <mesh ref={flameRef} position={[0, -550, 0]}>
+        <cylinderGeometry args={[15, 0, 300, 16]} />
+        <meshBasicMaterial color="#ffaa00" transparent opacity={0.6} blending={THREE.AdditiveBlending} />
       </mesh>
+      <mesh position={[0, -420, 0]}>
+        <cylinderGeometry args={[10, 0, 150, 16]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.9} blending={THREE.AdditiveBlending} />
+      </mesh>
+      
       <pointLight color="#ff8800" intensity={5} distance={5000} position={[0, -400, 0]} />
     </group>
   );
