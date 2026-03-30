@@ -69,7 +69,7 @@ class ProportionalNavigation:
                 N: float = None) -> np.ndarray:
         """Compute 3D acceleration command [ax, ay, az] in m/s².
 
-        a_cmd = N * Vc * lambda_dot
+        a_cmd = N * Vc * cross(V_m_hat, lambda_dot)
 
         Clipped to ±30g per axis.
         """
@@ -78,8 +78,29 @@ class ProportionalNavigation:
 
         Vc = self.closing_velocity(missile_state, target_state)
         lambda_dot = self.los_rate(missile_state, target_state)
+        v_m = missile_state[3:6]
+        v_m_mag = magnitude(v_m)
+        r_m = missile_state[:3]
+        r_t = target_state[:3]
+        R_vec = r_t - r_m
+        R_mag = magnitude(R_vec)
 
-        a_cmd = N * Vc * lambda_dot
+        if v_m_mag < 1.0 or R_mag < 1.0:
+            return np.zeros(3)
+            
+        R_hat = R_vec / R_mag
+
+        # True Proportional Navigation vector form:
+        # Acceleration must be perpendicular to LOS, in the plane of LOS rotation
+        a_cmd = N * Vc * cross(lambda_dot, R_hat)
+        
+        # Add gravity compensation (assuming gravity pulls in +Z direction in NED)
+        # We need an acceleration in -Z to counteract it
+        a_bias = np.array([0.0, 0.0, -9.80665])
+        
+        # Only apply gravity bias if the missile has reasonable speed
+        if v_m_mag > 50.0:
+            a_cmd = a_cmd + a_bias
 
         # Clip to max acceleration
         a_cmd = clip_vector(a_cmd, MAX_ACCEL_MS2)

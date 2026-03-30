@@ -61,14 +61,37 @@ export default function EngagementOps({ result, loading, onLaunch, config, setCo
       )
     : 0;
 
+  // Compute g-load from guidance acceleration commands
+  const gLoad = currentTel.ax != null
+    ? Math.sqrt(
+        Math.pow(currentTel.guidance_ax || currentTel.ax || 0, 2) +
+        Math.pow(currentTel.guidance_ay || currentTel.ay || 0, 2) +
+        Math.pow(currentTel.guidance_az || currentTel.az || 0, 2)
+      ) / 9.80665
+    : 0;
+
+  // Compute closing velocity from range change between frames
+  let closingVel = 0;
+  if (frame > 0 && trajectory.length > 1 && targetTraj.length > 1) {
+    const prevM = trajectory[Math.max(0, frame - 1)];
+    const prevT = targetTraj[Math.min(frame - 1, targetTraj.length - 1)];
+    const prevRange = Math.sqrt(
+      Math.pow((prevT.x || 0) - (prevM.x || 0), 2) +
+      Math.pow((prevT.y || 0) - (prevM.y || 0), 2) +
+      Math.pow((prevT.z || 0) - (prevM.z || 0), 2)
+    );
+    const dt = (currentTel.t || 0) - (prevM.t || 0);
+    if (dt > 0) closingVel = (prevRange - rangeToGo) / dt;
+  }
+
   const telData = {
     mach: currentTel.mach || 0,
     altitude_m: currentTel.altitude != null ? currentTel.altitude : (currentTel.altitude_m || 0),
     speed: currentTel.speed || 0,
     range_to_target_m: rangeToGo,
-    closing_velocity_ms: currentTel.closing_velocity || 0,
-    g_load: currentTel.g_load || 0,
-    phase: currentTel.phase || 'STANDBY',
+    closing_velocity_ms: closingVel,
+    g_load: gLoad,
+    phase: (currentTel.phase || 'STANDBY').toString().toUpperCase(),
     t: currentTel.t || 0,
   };
 
@@ -80,7 +103,7 @@ export default function EngagementOps({ result, loading, onLaunch, config, setCo
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
         {/* 3D Scene */}
         <div style={{
-          height: 420, borderRadius: 8,
+          height: 550, flexGrow: 1, borderRadius: 8,
           border: `1px solid ${theme.BORDER_DIM}`, overflow: 'hidden', position: 'relative'
         }}>
           <EngagementScene
@@ -123,11 +146,41 @@ export default function EngagementOps({ result, loading, onLaunch, config, setCo
               ))}
             </div>
           )}
+          {/* INTERCEPT / MISS Result Banner */}
+          {!playing && trajectory.length > 0 && frame >= trajectory.length - 2 && (
+            <div style={{
+              position: 'absolute', top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none', textAlign: 'center',
+              animation: 'fadeIn 0.5s ease-out'
+            }}>
+              <div style={{
+                fontFamily: theme.FONT_MONO, fontSize: 42, fontWeight: 900,
+                color: result?.intercept_achieved ? '#00ff66' : '#ff3333',
+                textShadow: result?.intercept_achieved
+                  ? '0 0 40px #00ff66, 0 0 80px #00ff6680'
+                  : '0 0 40px #ff3333, 0 0 80px #ff333380',
+                letterSpacing: 4
+              }}>
+                {result?.intercept_achieved ? '💥 TARGET DESTROYED' : '✕ MISSILE MISS'}
+              </div>
+              <div style={{
+                fontFamily: theme.FONT_MONO, fontSize: 14, color: '#ffffffaa',
+                marginTop: 8, letterSpacing: 2
+              }}>
+                Pk = {((result?.pk || 0) * 100).toFixed(1)}% &nbsp;|&nbsp; Miss: {(result?.miss_distance_m || 0).toFixed(1)}m &nbsp;|&nbsp; ToF: {(result?.time_of_flight_s || 0).toFixed(2)}s
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Status + Pk */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <EngagementStatusBoard summary={summary} />
+          <EngagementStatusBoard 
+            summary={summary} 
+            liveData={{...currentTel, rangeToGo}}
+            isFinished={trajectory.length > 0 && !playing && frame >= trajectory.length - 2}
+          />
           <PkGauge pk={pk} breakdown={pkBreakdown} />
         </div>
 

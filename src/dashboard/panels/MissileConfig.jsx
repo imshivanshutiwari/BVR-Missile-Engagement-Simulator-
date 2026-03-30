@@ -37,6 +37,7 @@ export default function MissileConfig({ config = {}, onChange }) {
             onChange={e => handleChange('guidance_law', e.target.value)}>
             <option value="png">PNG (N=4)</option>
             <option value="apng">APNG (Augmented)</option>
+            <option value="ai_model">🧠 AI NEURAL NET</option>
           </select>
         </div>
         <div>

@@ -6,11 +6,18 @@ import * as THREE from 'three';
 
 /* ── helpers ── */
 function toScene(p) {
-  // Physics NED: x=North, y=East, z=Down → Three.js: x=East, y=Up, z=-North  
-  return [p.y || 0, -(p.z || 0), -(p.x || 0)];
+  if (!p) return [0, 8000, 0];
+  const x = Number.isFinite(p.x) ? p.x : 0;
+  const y = Number.isFinite(p.y) ? p.y : 0;
+  const z = Number.isFinite(p.z) ? p.z : -8000;
+  return [y, -z, -x];
 }
 function toSceneV3(p) {
-  return new THREE.Vector3(p.y || 0, -(p.z || 0), -(p.x || 0));
+  if (!p) return new THREE.Vector3(0, 8000, 0);
+  const x = Number.isFinite(p.x) ? p.x : 0;
+  const y = Number.isFinite(p.y) ? p.y : 0;
+  const z = Number.isFinite(p.z) ? p.z : -8000;
+  return new THREE.Vector3(y, -z, -x);
 }
 
 /* ── Camera auto-fit ── */
@@ -80,6 +87,8 @@ function RangeRings() {
 /* ── Missile body ── */
 function MissileBody({ position, velocity }) {
   const ref = useRef();
+  const flameRef = useRef();
+  
   useEffect(() => {
     if (!ref.current || !velocity) return;
     const dir = new THREE.Vector3(...velocity).normalize();
@@ -89,54 +98,61 @@ function MissileBody({ position, velocity }) {
     }
   }, [velocity]);
 
-  const scale = 200; // Scale up for visibility
+  useFrame((state) => {
+    if (flameRef.current) {
+      // Pulse flame with sine wave for animation
+      flameRef.current.scale.setScalar(1.0 + Math.sin(state.clock.elapsedTime * 40) * 0.2);
+    }
+  });
+
   return (
-    <group ref={ref} position={position}>
+    <group ref={ref} position={position} scale={10}>
       <mesh>
-        <cylinderGeometry args={[18 * 1, 18 * 1, 730, 12]} />
-        <meshStandardMaterial color="#8899aa" metalness={0.8} roughness={0.3} emissive="#334455" emissiveIntensity={0.3} />
+        <cylinderGeometry args={[18, 18, 730, 12]} />
+        <meshStandardMaterial color="#ffffff" metalness={0.8} roughness={0.3} emissive="#445566" emissiveIntensity={0.5} />
       </mesh>
       <mesh position={[0, 420, 0]}>
         <coneGeometry args={[18, 100, 12]} />
-        <meshStandardMaterial color="#667788" metalness={0.9} roughness={0.2} />
+        <meshStandardMaterial color="#8899aa" metalness={0.9} roughness={0.2} />
       </mesh>
-      <pointLight color="#66bbff" intensity={3} distance={2000} />
-      <pointLight color="#ff6600" intensity={2} distance={1500} position={[0, -400, 0]} />
+      {/* Engine Flame */}
+      <mesh ref={flameRef} position={[0, -500, 0]}>
+        <coneGeometry args={[35, 400, 8]} />
+        <meshBasicMaterial color="#ffaa00" transparent opacity={0.8} />
+      </mesh>
+      <pointLight color="#ff8800" intensity={5} distance={5000} position={[0, -400, 0]} />
     </group>
   );
 }
 
 /* ── Target aircraft ── */
 function TargetAircraft({ position, label = 'F-16 TGT' }) {
-  const scale = 300;
+  // Make the target massive in 3D so it's easily visible from 20km away
   return (
-    <group position={position}>
-      {/* fuselage */}
+    <group position={position} scale={6}>
       <mesh>
         <boxGeometry args={[200, 100, 600]} />
         <meshStandardMaterial color="#aa2222" metalness={0.5} roughness={0.5} emissive="#660000" emissiveIntensity={0.4} />
       </mesh>
-      {/* wings */}
       <mesh>
         <boxGeometry args={[800, 20, 300]} />
         <meshStandardMaterial color="#992222" metalness={0.5} roughness={0.5} />
       </mesh>
-      {/* tail */}
       <mesh position={[0, 80, -250]}>
         <boxGeometry args={[20, 200, 100]} />
         <meshStandardMaterial color="#882222" />
       </mesh>
-      <Html position={[0, 300, 0]} center style={{ pointerEvents: 'none' }}>
+      <Html position={[0, 100, 0]} center style={{ pointerEvents: 'none' }}>
         <div style={{
-          fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700,
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700,
           color: '#ff3333', background: 'rgba(5,8,16,0.85)',
-          padding: '3px 8px', borderRadius: 3, border: '1px solid #ff333360',
+          padding: '4px 10px', borderRadius: 4, border: '1px solid #ff333380',
           whiteSpace: 'nowrap', textShadow: '0 0 10px #ff3333'
         }}>
           ◆ {label}
         </div>
       </Html>
-      <pointLight color="#ff4400" intensity={2} distance={1000} />
+      <pointLight color="#ff4400" intensity={3} distance={5000} />
     </group>
   );
 }
@@ -167,29 +183,71 @@ function TargetTrail({ points }) {
 
 /* ── Explosion ── */
 function ExplosionEffect({ position, active }) {
+  const pointsRef = useRef();
+  const matRef = useRef();
+  const ringRef = useRef();
+  const fireballRef = useRef();
+
   const particles = useMemo(() => {
     const pts = [];
-    for (let i = 0; i < 400; i++) {
+    for (let i = 0; i < 1200; i++) {
       pts.push(
-        (Math.random() - 0.5) * 600,
-        (Math.random() - 0.5) * 600,
-        (Math.random() - 0.5) * 600
+        (Math.random() - 0.5) * 1000,
+        (Math.random() - 0.5) * 1000,
+        (Math.random() - 0.5) * 1000
       );
     }
     return new Float32Array(pts);
   }, []);
 
+  useFrame((state, delta) => {
+    if (!active) return;
+    if (pointsRef.current) {
+      const s = pointsRef.current.scale.x;
+      const newScale = Math.min(s + delta * 8, 20);
+      pointsRef.current.scale.set(newScale, newScale, newScale);
+      pointsRef.current.rotation.y += delta * 0.5;
+    }
+    if (matRef.current) {
+      matRef.current.opacity = Math.max(0.1, matRef.current.opacity - delta * 0.15);
+    }
+    if (ringRef.current) {
+      const rs = ringRef.current.scale.x;
+      const newRs = Math.min(rs + delta * 10, 40);
+      ringRef.current.scale.set(newRs, newRs, newRs);
+      ringRef.current.material.opacity = Math.max(0, ringRef.current.material.opacity - delta * 0.3);
+    }
+    if (fireballRef.current) {
+      const fs = fireballRef.current.scale.x;
+      const newFs = Math.min(fs + delta * 6, 15);
+      fireballRef.current.scale.set(newFs, newFs, newFs);
+      fireballRef.current.material.opacity = Math.max(0, fireballRef.current.material.opacity - delta * 0.2);
+    }
+  });
+
   if (!active || !position) return null;
   return (
     <group position={position}>
-      <pointLight color="#ffffff" intensity={80} distance={5000} decay={2} />
-      <pointLight color="#ff6600" intensity={40} distance={3000} decay={2} />
-      <points>
+      <pointLight color="#ffffff" intensity={500} distance={30000} decay={2} />
+      <pointLight color="#ff4400" intensity={300} distance={15000} decay={2} />
+      <pointLight color="#ffaa00" intensity={200} distance={20000} decay={2} />
+      {/* Fireball sphere */}
+      <mesh ref={fireballRef}>
+        <sphereGeometry args={[200, 32, 32]} />
+        <meshBasicMaterial color="#ff6600" transparent opacity={0.9} blending={THREE.AdditiveBlending} />
+      </mesh>
+      {/* Particle cloud */}
+      <points ref={pointsRef}>
         <bufferGeometry>
-          <bufferAttribute attach="attributes-position" count={400} array={particles} itemSize={3} />
+          <bufferAttribute attach="attributes-position" count={1200} array={particles} itemSize={3} />
         </bufferGeometry>
-        <pointsMaterial color="#ffaa33" size={30} transparent opacity={0.9} sizeAttenuation />
+        <pointsMaterial ref={matRef} color="#ffaa33" size={200} transparent opacity={1} sizeAttenuation depthWrite={false} blending={THREE.AdditiveBlending} />
       </points>
+      {/* Shockwave ring */}
+      <mesh ref={ringRef} rotation={[-Math.PI/2, 0, 0]}>
+        <ringGeometry args={[200, 500, 128]} />
+        <meshBasicMaterial color="#ffcc00" transparent opacity={0.7} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} />
+      </mesh>
     </group>
   );
 }
@@ -233,7 +291,7 @@ export default function EngagementScene({ trajectoryData, targetTrajectory, curr
     return toScene(last);
   }, [intercept, trajectoryData, hasData]);
 
-  const showExplosion = intercept && safeFrame >= trajectoryData.length - 10;
+  const showExplosion = intercept && hasData && safeFrame >= Math.floor(trajectoryData.length * 0.92);
 
   return (
     <div style={{ width: '100%', height: '100%', minHeight: 400 }}>
@@ -265,7 +323,15 @@ export default function EngagementScene({ trajectoryData, targetTrajectory, curr
         )}
 
         <CameraRig missilePos={missilePos} targetPos={targetPos} hasData={hasData} />
-        <OrbitControls enableDamping dampingFactor={0.08} />
+        <OrbitControls 
+          makeDefault 
+          maxDistance={250000}
+          minDistance={100} 
+          zoomSpeed={3.0} 
+          panSpeed={2.5} 
+          enableDamping 
+          dampingFactor={0.08} 
+        />
       </Canvas>
     </div>
   );

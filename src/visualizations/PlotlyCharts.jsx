@@ -333,7 +333,7 @@ export function GuidanceErrorPlot({ trajectory }) {
         ]}
         layout={{ ...baseLayout,
           xaxis: { ...baseLayout.xaxis, title: 'Time (s)' },
-          yaxis: { ...baseLayout.yaxis, title: 'Accel Command (g)' },
+          yaxis: { ...baseLayout.yaxis, title: 'Accel Command (g)', range: [-55, 55] },
           title: { text: 'Guidance Acceleration Commands', font: { color: theme.CYAN_PRIMARY, size: 12 } }
         }}
         config={{ responsive: true, displayModeBar: false }}

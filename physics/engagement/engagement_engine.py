@@ -127,7 +127,7 @@ class EngagementEngine:
         ])
         target = setup['target']
         guidance = setup['guidance']
-        is_apng = guidance_law.lower() == "apng"
+        needs_target_accel = guidance_law.lower() in ("apng", "ai_model")
 
         # Target state function
         def target_fn(t):
@@ -140,7 +140,7 @@ class EngagementEngine:
 
         def guidance_fn(t, missile_state, target_state):
             predictor.update(t, target_state)
-            if is_apng:
+            if needs_target_accel:
                 target_accel = predictor.get_acceleration()
                 return guidance.compute(missile_state, target_state, target_accel)
             return guidance.compute(missile_state, target_state)

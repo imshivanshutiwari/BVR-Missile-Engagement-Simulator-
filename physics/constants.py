@@ -51,8 +51,8 @@ CD0_VALUES = [0.016, 0.018, 0.021, 0.026, 0.038, 0.042,
 
 # ── Guidance ──
 NAV_CONSTANT_N = 4.0               # proportional navigation constant
-MAX_ACCEL_G = 30.0                 # max g-load for missile
-MAX_ACCEL_MS2 = MAX_ACCEL_G * G0   # m/s² ≈ 294.3
+MAX_ACCEL_G = 50.0                 # max g-load for missile
+MAX_ACCEL_MS2 = MAX_ACCEL_G * G0   # m/s² ≈ 490.3
 
 # ── Seeker ──
 SEEKER_FOV_HALF_DEG = 30.0         # ±30° gimbal limit
@@ -71,9 +71,9 @@ F16_VCRUISE = 250.0                # m/s
 F16_G_MAX = 9.0                    # structural g limit
 F16_CLIMB_RATE = 250.0             # m/s max
 F16_BANK_RATE_DEG = 180.0          # deg/s max bank rate
-F16_EVASION_G = 7.0                # barrel roll g-load
+F16_EVASION_G = 5.0                # barrel roll g-load (5g evasion)
 
 # ── Simulation ──
-SIM_DT = 0.01                      # s integration time step
+SIM_DT = 0.02                      # s integration time step (balanced speed vs accuracy)
 SIM_MAX_TIME = 120.0               # s maximum simulation time
-INTERCEPT_DISTANCE = FUZE_RADIUS   # m distance for intercept detection
+INTERCEPT_DISTANCE = LETHAL_RADIUS # m distance for intercept detection (warhead kill radius)

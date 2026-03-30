@@ -9,7 +9,7 @@ a_commanded = N * Vc * lambda_dot + (N/2) * a_target
 import numpy as np
 from physics.constants import NAV_CONSTANT_N, MAX_ACCEL_MS2
 from physics.guidance.png_law import ProportionalNavigation
-from physics.utils.vector_math import clip_vector
+from physics.utils.vector_math import clip_vector, magnitude
 
 
 class AugmentedProportionalNavigation(ProportionalNavigation):
@@ -34,15 +34,42 @@ class AugmentedProportionalNavigation(ProportionalNavigation):
         # Standard PNG term
         Vc = self.closing_velocity(missile_state, target_state)
         lambda_dot = self.los_rate(missile_state, target_state)
-        a_png = N * Vc * lambda_dot
+        
+        v_m = missile_state[3:6]
+        v_m_mag = magnitude(v_m)
+        r_m = missile_state[:3]
+        r_t = target_state[:3]
+        R_vec = r_t - r_m
+        R_mag = magnitude(R_vec)
+        
+        if v_m_mag < 1.0 or R_mag < 1.0:
+            a_png = np.zeros(3)
+        else:
+            R_hat = R_vec / R_mag
+            a_png = N * Vc * np.cross(lambda_dot, R_hat)
 
-        # Augmentation term
+        # Augmentation term (requires projected target acceleration perpendicular to LOS)
         if target_accel is not None:
-            a_aug = (N / 2.0) * target_accel
+            r_m = missile_state[:3]
+            r_t = target_state[:3]
+            R_vec = r_t - r_m
+            R_mag = magnitude(R_vec)
+            
+            if R_mag > 1.0:
+                R_hat = R_vec / R_mag
+                # Target acceleration perpendicular to LOS
+                a_t_normal = target_accel - np.dot(target_accel, R_hat) * R_hat
+                a_aug = (N / 2.0) * a_t_normal
+            else:
+                a_aug = np.zeros(3)
         else:
             a_aug = np.zeros(3)
 
         a_cmd = a_png + a_aug
+        
+        # Add gravity compensation
+        if v_m_mag > 50.0:
+            a_cmd = a_cmd + np.array([0.0, 0.0, -9.80665])
 
         # Clip to max acceleration
         a_cmd = clip_vector(a_cmd, MAX_ACCEL_MS2)

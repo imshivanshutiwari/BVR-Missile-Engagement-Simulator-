@@ -26,22 +26,28 @@ function StatusCard({ label, value, color, icon: Icon }) {
   );
 }
 
-export default function EngagementStatusBoard({ summary }) {
+export default function EngagementStatusBoard({ summary, liveData, isFinished }) {
   const s = summary || {};
-  const phase = s.intercept_achieved ? 'INTERCEPT' : 'MISS';
-  const phaseClr = s.intercept_achieved ? theme.GREEN_OK : theme.RED_CRITICAL;
+  const t = liveData?.t || 0;
+  
+  // State: FLYING until the playback finishes, then INTERCEPT or MISS
+  const phase = isFinished ? (s.intercept_achieved ? 'INTERCEPT' : 'MISS') : 'IN FLIGHT';
+  const phaseClr = isFinished ? (s.intercept_achieved ? theme.GREEN_OK : theme.RED_CRITICAL) : theme.CYAN_PRIMARY;
+
+  // Live distance: use liveData range or default to final miss distance if finished
+  const currentDist = liveData?.rangeToGo !== undefined ? liveData.rangeToGo : (s.miss_distance_m || 0);
 
   return (
     <div className="panel">
       <div className="panel-header"><ShieldCheck size={14} />ENGAGEMENT STATUS</div>
       <div className="panel-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <StatusCard label="MISSILE STATE" value={phase} color={phaseClr} icon={Target} />
-        <StatusCard label="MISS DISTANCE" value={`${(s.miss_distance_m || 0).toFixed(1)} m`}
-          color={s.miss_distance_m < 15 ? theme.GREEN_OK : theme.RED_CRITICAL} icon={Crosshair} />
-        <StatusCard label="TIME OF FLIGHT" value={`${(s.time_of_flight_s || 0).toFixed(2)} s`}
+        <StatusCard label={isFinished ? "FINAL MISS DIST" : "CURRENT RANGE"} value={`${currentDist.toFixed(1)} m`}
+          color={isFinished ? (currentDist < 15 ? theme.GREEN_OK : theme.RED_CRITICAL) : theme.TEXT_PRIMARY} icon={Crosshair} />
+        <StatusCard label="FLIGHT TIME" value={`${t.toFixed(2)} s`}
           color={theme.CYAN_PRIMARY} icon={Timer} />
-        <StatusCard label="INTERCEPT" value={s.intercept_achieved ? 'YES' : 'NO'}
-          color={s.intercept_achieved ? theme.GREEN_OK : theme.RED_CRITICAL} icon={ShieldCheck} />
+        <StatusCard label="INTERCEPT" value={isFinished ? (s.intercept_achieved ? 'YES' : 'NO') : 'PENDING'}
+          color={isFinished ? (s.intercept_achieved ? theme.GREEN_OK : theme.RED_CRITICAL) : theme.TEXT_DIM} icon={ShieldCheck} />
         <StatusCard label="GUIDANCE LAW" value={(s.guidance_law || 'PNG').toUpperCase()}
           color={theme.PURPLE_INFO} />
         <StatusCard label="SCENARIO" value={(s.scenario || 'head_on').replace('_', '-').toUpperCase()}
